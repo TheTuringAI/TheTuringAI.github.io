@@ -1,0 +1,114 @@
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    position: relative; /* Allow absolute positioning */
+    overflow: hidden; /* Prevent scrolling */
+}
+
+canvas {
+    flex-grow: 1;
+    border: 1px solid black;
+    cursor: crosshair;
+    display: block; /* Remove extra spacing around canvas */
+}
+
+/* Style the button and position it in the top-right */
+button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: bold;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+/* Signal legend box */
+#signalLegend {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 250px;
+    height: auto;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 2px solid black;
+    padding: 10px;
+    text-align: left;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Individual signal entry */
+.legend {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 200px;
+    background: white;
+    border: 1px solid black;
+    padding: 10px;
+}
+
+.signal-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.color-block {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    border: 1px solid black;
+}
+
+/* Add button */
+.add-signal {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 3px;
+    transition: background-color 0.3s ease;
+}
+
+.add-signal:hover {
+    background-color: #218838;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.signal-color {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    border: 1px solid black;
+}
