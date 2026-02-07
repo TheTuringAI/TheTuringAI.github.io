@@ -48,7 +48,7 @@ body {
 
 .flower {
     position: fixed;
-    font-size: 10vw;
+    font-size: 150px;
     z-index: 10;
     pointer-events: none;
     user-select: none;
