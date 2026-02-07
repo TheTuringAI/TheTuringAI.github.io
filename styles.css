@@ -122,7 +122,10 @@ body {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     z-index: 100;
     animation: fadeOut 8s ease-in-out forwards;
-    white-space: nowrap;
+    white-space: normal;
+    max-width: 90%;
+    text-align: center;
+    line-height: 1.4;
 }
 
 @keyframes fadeOut {
