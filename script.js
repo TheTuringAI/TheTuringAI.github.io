@@ -436,17 +436,20 @@ function handleYesClick() {
     
     // Show thank you message
     const thankYou = document.createElement('div');
+    thankYou.id = 'thank-you-message';
     thankYou.style.cssText = `
         position: fixed;
         top: 75%;
         left: 50%;
         transform: translate(-50%, -50%);
-        font-size: 50px;
+        font-size: min(50px, 8vw);
         color: #ff1493;
         font-weight: bold;
         text-align: center;
         z-index: 1000;
         animation: fadeIn 1s ease-in-out forwards;
+        padding: 0 20px;
+        max-width: 90%;
     `;
     thankYou.textContent = '🎉 Yay moi aussi je t\'aime 💖';
     document.body.appendChild(thankYou);
