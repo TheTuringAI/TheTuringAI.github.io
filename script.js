@@ -479,4 +479,3 @@ document.addEventListener('touchmove', (e) => {
     cursor.style.top = mouseY + 'px';
 }, { passive: false });
 
-
