@@ -1,6 +1,6 @@
 const flowerEmojis = ['🌸', '🌺', '🌼', '🌻', '🌷', '🌹', '💐', '🏵️'];
 const numberOfFlowers = 200;
-let blowDistance = 150; // Distance at which flowers start to blow away
+let blowDistance = 200; // Distance at which flowers start to blow away
 let blowForceMultiplier = 5;
 
 let mouseX = window.innerWidth / 2;
@@ -441,7 +441,7 @@ function handleYesClick() {
         top: 75%;
         left: 50%;
         transform: translate(-50%, -50%);
-        font-size: 3.5vw;
+        font-size: 60px;
         color: #ff1493;
         font-weight: bold;
         text-align: center;
