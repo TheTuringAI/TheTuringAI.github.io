@@ -448,7 +448,7 @@ function handleYesClick() {
         z-index: 1000;
         animation: fadeIn 1s ease-in-out forwards;
     `;
-    thankYou.textContent = '🎉 Wouhou moi aussi je t\'aime 💖';
+    thankYou.textContent = '🎉 Yay moi aussi je t\'aime 💖';
     document.body.appendChild(thankYou);
 }
 
@@ -478,4 +478,5 @@ document.addEventListener('touchmove', (e) => {
     cursor.style.left = mouseX + 'px';
     cursor.style.top = mouseY + 'px';
 }, { passive: false });
+
 
