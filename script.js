@@ -447,6 +447,7 @@ function handleYesClick() {
         text-align: center;
         z-index: 1000;
         animation: fadeIn 1s ease-in-out forwards;
+        white-space: nowrap;
     `;
     thankYou.textContent = '🎉 Yay moi aussi je t\'aime 💖';
     document.body.appendChild(thankYou);
