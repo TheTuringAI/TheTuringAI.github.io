@@ -121,7 +121,8 @@ body {
     color: #ff1493;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     z-index: 100;
-    animation: fadeOut 10s ease-in-out forwards;
+    animation: fadeOut 8s ease-in-out forwards;
+    white-space: nowrap;
 }
 
 @keyframes fadeOut {

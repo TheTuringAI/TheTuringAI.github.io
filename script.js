@@ -186,8 +186,8 @@ function updateFlowerPositions() {
         flower.style.transform = `translate(${finalX}px, ${finalY}px) rotate(${pos.rotation}deg)`;
         
         // Check if flower is pushed off screen or far enough to be considered cleared
-        const isOffScreen = finalX < 0 || finalX > window.innerWidth || 
-                           finalY < 0 || finalY > window.innerHeight;
+        const isOffScreen = finalX < -50 || finalX > window.innerWidth + 50 || 
+                           finalY < -50 || finalY > window.innerHeight + 50;
         
         if (isOffScreen && !pos.cleared) {
             pos.cleared = true;
@@ -441,7 +441,7 @@ function handleYesClick() {
         top: 75%;
         left: 50%;
         transform: translate(-50%, -50%);
-        font-size: 60px;
+        font-size: 100px;
         color: #ff1493;
         font-weight: bold;
         text-align: center;
