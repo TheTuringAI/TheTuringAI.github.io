@@ -48,7 +48,7 @@ body {
 
 .flower {
     position: fixed;
-    font-size: var(--flower-size);
+    font-size: 10vw;
     z-index: 10;
     pointer-events: none;
     user-select: none;
@@ -218,30 +218,16 @@ body {
 }
 
 @media (max-width: 768px) {
-    :root {
-        --flower-size: min(60px, 8vw);
-    }
-    
     #message {
-        font-size: min(40px, 8vw);
+        font-size: 40px;
     }
     #progress-container {
-        width: 80%;
-        max-width: 250px;
+        width: 250px;
         bottom: 20px;
     }
-    #answer-buttons {
-        top: calc(50% + 100px);
-        gap: 20px;
-    }
-    .answer-btn {
-        padding: 15px 30px;
-        font-size: min(24px, 5vw);
-    }
-    #instruction {
-        font-size: 14px;
-        padding: 10px 20px;
-        white-space: normal;
-        max-width: 90%;
+    #controls {
+        top: 70px;
+        flex-direction: column;
+        gap: 5px;
     }
 }
