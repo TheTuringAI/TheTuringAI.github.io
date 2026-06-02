@@ -1,20 +1,456 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pour ma petite fleur 💕</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Days Until July 1st</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; overflow: hidden; touch-action: none; }
+    canvas { display: block; }
+    #touch-controls {
+      position: fixed; bottom: 20px; left: 0; right: 0;
+      display: flex; justify-content: space-between;
+      padding: 0 24px; pointer-events: none; z-index: 10;
+    }
+    .btn {
+      width: 62px; height: 62px; border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      border: 2px solid rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.85); font-size: 22px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; pointer-events: all; user-select: none;
+      -webkit-user-select: none; touch-action: none;
+    }
+    #btnThrust {
+      width: 72px; height: 72px;
+      background: rgba(255,140,0,0.18);
+      border-color: rgba(255,140,0,0.45);
+      font-size: 12px; font-weight: bold; flex-direction: column; gap: 2px;
+    }
+  </style>
 </head>
 <body>
-    <div id="instruction">Souffle sur les fleurs en bougeant ta souris ou en passant ton doigt sur l'écran</div>
-    
-    <div id="message">
-        Veux-tu être <br> mon amoureuse ? ❤️
-    </div>
+<canvas id="game"></canvas>
 
-    <div id="hearts-container"></div>
+<div id="touch-controls">
+  <div style="display:flex;gap:10px">
+    <div class="btn" id="btnLeft">&#9664;</div>
+    <div class="btn" id="btnRight">&#9654;</div>
+  </div>
+  <div class="btn" id="btnThrust">&#128640;<br>THRUST</div>
+</div>
 
-    <script src="script.js"></script>
+<script>
+/* ─── Canvas setup ──────────────────────────────────────────────────── */
+const canvas = document.getElementById('game');
+const ctx    = canvas.getContext('2d');
+
+function resize() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', () => { resize(); buildCollisionMap(); });
+
+/* ─── Days calculation ──────────────────────────────────────────────── */
+function daysUntilDate() {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  let target = new Date(now.getFullYear(), 6, 1); // 6 = July (0-indexed)
+  if (target <= now) target = new Date(now.getFullYear() + 1, 6, 1);
+  return Math.round((target - now) / 86400000);
+}
+const DAYS = daysUntilDate();
+
+/* ─── Pixel-perfect collision map ───────────────────────────────────── */
+const collCanvas = document.createElement('canvas');
+const collCtx    = collCanvas.getContext('2d');
+let   collData   = null;
+
+function numberFontSize() {
+  return Math.min(canvas.width * 0.60, canvas.height * 0.68);
+}
+
+function buildCollisionMap() {
+  collCanvas.width  = canvas.width;
+  collCanvas.height = canvas.height;
+  collCtx.clearRect(0, 0, collCanvas.width, collCanvas.height);
+  const fs = numberFontSize();
+  collCtx.font         = `900 ${fs}px 'Arial Black', Arial, sans-serif`;
+  collCtx.textAlign    = 'center';
+  collCtx.textBaseline = 'middle';
+  collCtx.fillStyle    = '#fff';
+  collCtx.fillText(String(DAYS), collCanvas.width / 2, collCanvas.height / 2);
+  collData = collCtx.getImageData(0, 0, collCanvas.width, collCanvas.height);
+}
+buildCollisionMap();
+
+function isSolid(x, y) {
+  x = Math.round(x); y = Math.round(y);
+  if (!collData || x < 0 || x >= collCanvas.width || y < 0 || y >= collCanvas.height) return false;
+  return collData.data[(y * collCanvas.width + x) * 4 + 3] > 80;
+}
+
+/* ─── Stars ─────────────────────────────────────────────────────────── */
+const stars = Array.from({ length: 220 }, () => ({
+  x:     Math.random(),
+  y:     Math.random(),
+  r:     Math.random() * 1.4 + 0.3,
+  phase: Math.random() * Math.PI * 2,
+  spd:   Math.random() * 0.8 + 0.3,
+}));
+
+/* ─── Particles ─────────────────────────────────────────────────────── */
+const particles = [];
+function spawnExhaust(wx, wy) {
+  if (Math.random() > 0.55) return;
+  particles.push({
+    x: wx, y: wy,
+    vx: (Math.random() - 0.5) * 55,
+    vy: 90 + Math.random() * 70,
+    t: 1,
+    dur: 0.22 + Math.random() * 0.16,
+    r: 3 + Math.random() * 2.5,
+  });
+}
+
+/* ─── Player ─────────────────────────────────────────────────────────── */
+const PW = 22, PH = 30;
+
+const player = {
+  x: canvas.width / 2 - PW / 2,
+  y: 60,
+  vx: 0, vy: 0,
+  facing: 1,
+  thrusting: false,
+  thrustT: 0,
+};
+
+/* Physics constants (units: px, s) */
+const GRAVITY    =  680;
+const THRUST     = -1380;
+const ACCEL_X    =  580;
+const MAX_VX     =  270;
+const MAX_VY_UP  = -580;
+const MAX_VY_DN  =  660;
+const FRICTION   =  11;
+
+/* ─── Input ──────────────────────────────────────────────────────────── */
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+const touch = { left: false, right: false, thrust: false };
+function bindBtn(id, prop) {
+  const el = document.getElementById(id);
+  ['touchstart','mousedown'].forEach(ev =>
+    el.addEventListener(ev, e => { touch[prop] = true; e.preventDefault(); }, { passive: false }));
+  ['touchend','touchcancel','mouseup','mouseleave'].forEach(ev =>
+    el.addEventListener(ev, e => { touch[prop] = false; e.preventDefault(); }, { passive: false }));
+}
+bindBtn('btnLeft',   'left');
+bindBtn('btnRight',  'right');
+bindBtn('btnThrust', 'thrust');
+
+const goLeft    = () => keys['ArrowLeft']  || touch.left;
+const goRight   = () => keys['ArrowRight'] || touch.right;
+const goThrust  = () => keys['ArrowUp'] || touch.thrust;
+
+/* ─── Collision helpers ───────────────────────────────────────────────── */
+function hitBottom(px, py) {
+  const y = py + PH + 1;
+  for (let x = px + 3; x <= px + PW - 3; x += 2) if (isSolid(x, y)) return true;
+  return false;
+}
+function hitTop(px, py) {
+  const y = py - 1;
+  for (let x = px + 3; x <= px + PW - 3; x += 2) if (isSolid(x, y)) return true;
+  return false;
+}
+function hitRight(px, py) {
+  const x = px + PW + 1;
+  for (let y = py + 3; y <= py + PH - 3; y += 2) if (isSolid(x, y)) return true;
+  return false;
+}
+function hitLeft(px, py) {
+  const x = px - 1;
+  for (let y = py + 3; y <= py + PH - 3; y += 2) if (isSolid(x, y)) return true;
+  return false;
+}
+
+/* ─── Update ─────────────────────────────────────────────────────────── */
+function update(dt) {
+  const thrust = goThrust();
+  const left   = goLeft();
+  const right  = goRight();
+
+  player.thrusting = thrust;
+  if (thrust) player.thrustT += dt * 18;
+
+  /* Forces */
+  player.vy += GRAVITY * dt;
+  if (thrust)   player.vy += THRUST * dt;
+  if (left)  { player.vx -= ACCEL_X * dt; player.facing = -1; }
+  if (right) { player.vx += ACCEL_X * dt; player.facing =  1; }
+  if (!left && !right) player.vx *= Math.exp(-FRICTION * dt);
+
+  /* Clamp */
+  player.vx = Math.max(-MAX_VX,   Math.min(MAX_VX,   player.vx));
+  player.vy = Math.max(MAX_VY_UP, Math.min(MAX_VY_DN, player.vy));
+
+  /* Move X then resolve */
+  player.x += player.vx * dt;
+  let safety = 0;
+  if (player.vx > 0 && hitRight(player.x, player.y)) {
+    player.vx = 0;
+    while (safety++ < 30 && hitRight(player.x, player.y)) player.x -= 1;
+  } else if (player.vx < 0 && hitLeft(player.x, player.y)) {
+    player.vx = 0;
+    safety = 0;
+    while (safety++ < 30 && hitLeft(player.x, player.y)) player.x += 1;
+  }
+
+  /* Move Y then resolve */
+  player.y += player.vy * dt;
+  safety = 0;
+  if (player.vy > 0 && hitBottom(player.x, player.y)) {
+    player.vy = 0;
+    while (safety++ < 40 && hitBottom(player.x, player.y)) player.y -= 1;
+  } else if (player.vy < 0 && hitTop(player.x, player.y)) {
+    player.vy = 0;
+    safety = 0;
+    while (safety++ < 40 && hitTop(player.x, player.y)) player.y += 1;
+  }
+
+  /* Screen edges */
+  if (player.x < 0)                     { player.x = 0;                  player.vx = 0; }
+  if (player.x + PW > canvas.width)     { player.x = canvas.width - PW;  player.vx = 0; }
+  if (player.y + PH > canvas.height)    { player.y = canvas.height - PH; player.vy = 0; }
+  if (player.y < 0)                     { player.y = 0;                  player.vy = 0; }
+
+  /* Exhaust particles — spawn from jetpack nozzle */
+  if (thrust) {
+    const jx = player.facing > 0
+      ? player.x + 3
+      : player.x + PW - 3;
+    spawnExhaust(jx, player.y + PH * 0.84);
+  }
+
+  /* Update particles */
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.t -= dt / p.dur;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    if (p.t <= 0) particles.splice(i, 1);
+  }
+}
+
+/* ─── Draw helpers ───────────────────────────────────────────────────── */
+function rr(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.lineTo(x + w - r, y);
+  c.arcTo(x + w, y, x + w, y + r, r);
+  c.lineTo(x + w, y + h - r);
+  c.arcTo(x + w, y + h, x + w - r, y + h, r);
+  c.lineTo(x + r, y + h);
+  c.arcTo(x, y + h, x, y + h - r, r);
+  c.lineTo(x, y + r);
+  c.arcTo(x, y, x + r, y, r);
+  c.closePath();
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    const a = p.t;
+    const r = p.r * p.t;
+    ctx.globalAlpha = a * 0.75;
+    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+    g.addColorStop(0,   'rgba(255,250,200,1)');
+    g.addColorStop(0.4, 'rgba(255,110,0,0.8)');
+    g.addColorStop(1,   'rgba(255,40,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, Math.max(r, 0.1), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawPlayer() {
+  const cx = player.x + PW / 2;
+  const cy = player.y + PH / 2;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  if (player.facing < 0) ctx.scale(-1, 1);
+
+  /* ── Jetpack body ── */
+  ctx.fillStyle = '#6a7f95';
+  rr(ctx, -PW / 2 - 8, -PH / 2 + 8, 9, 15, 2); ctx.fill();
+  ctx.fillStyle = '#4a5f75';
+  ctx.fillRect(-PW / 2 - 7, -PH / 2 + 11, 6, 2);
+  ctx.fillRect(-PW / 2 - 7, -PH / 2 + 15, 6, 2);
+  /* nozzle */
+  ctx.fillStyle = '#3a4f65';
+  ctx.fillRect(-PW / 2 - 6, -PH / 2 + 23, 5, 4);
+
+  /* ── Jetpack flame ── */
+  if (player.thrusting) {
+    const flicker = 0.65 + 0.35 * Math.sin(player.thrustT);
+    const fh = (13 + 5 * Math.sin(player.thrustT * 1.7)) * flicker;
+    const ny = -PH / 2 + 27;
+    const fx = -PW / 2 - 4;
+    const grad = ctx.createLinearGradient(fx, ny, fx, ny + fh);
+    grad.addColorStop(0,   'rgba(255,255,220,0.95)');
+    grad.addColorStop(0.25,'rgba(255,180,0,0.85)');
+    grad.addColorStop(0.7, 'rgba(255,60,0,0.6)');
+    grad.addColorStop(1,   'rgba(255,20,0,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(fx - 2, ny);
+    ctx.quadraticCurveTo(fx - 5, ny + fh * 0.5, fx - 1, ny + fh);
+    ctx.quadraticCurveTo(fx + 3, ny + fh * 0.7, fx + 7, ny + fh);
+    ctx.quadraticCurveTo(fx + 5, ny + fh * 0.5, fx + 4, ny);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  /* ── Suit body ── */
+  ctx.fillStyle = '#dde8f8';
+  rr(ctx, -PW / 2, -PH / 2 + 10, PW, PH - 10, 4); ctx.fill();
+  /* seam */
+  ctx.strokeStyle = '#b8cce0'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-PW / 2 + 4, -PH / 2 + 16);
+  ctx.lineTo( PW / 2 - 4, -PH / 2 + 16);
+  ctx.stroke();
+  /* belt */
+  ctx.fillStyle = '#f0a000';
+  ctx.fillRect(-PW / 2, -PH / 2 + 20, PW, 3);
+
+  /* ── Legs ── */
+  ctx.fillStyle = '#c0d2e8';
+  ctx.fillRect(-PW / 2 + 1,  PH / 2 - 10, 8, 10);
+  ctx.fillRect( PW / 2 - 9,  PH / 2 - 10, 8, 10);
+  /* boots */
+  ctx.fillStyle = '#2a3a4a';
+  ctx.fillRect(-PW / 2,      PH / 2 - 4, 11, 4);
+  ctx.fillRect( PW / 2 - 11, PH / 2 - 4, 11, 4);
+
+  /* ── Helmet ── */
+  ctx.fillStyle = '#dde8f8';
+  ctx.beginPath(); ctx.arc(0, -PH / 2 + 8, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#b0c4dc'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  /* visor */
+  const vg = ctx.createRadialGradient(2, -PH / 2 + 6, 1, 2, -PH / 2 + 8, 7);
+  vg.addColorStop(0, 'rgba(180,230,255,0.95)');
+  vg.addColorStop(1, 'rgba(40,100,200,0.75)');
+  ctx.fillStyle = vg;
+  ctx.beginPath(); ctx.ellipse(2, -PH / 2 + 8, 6, 5.5, 0, 0, Math.PI * 2); ctx.fill();
+  /* shine */
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.beginPath(); ctx.ellipse(-1, -PH / 2 + 4.5, 2.5, 1.5, -0.4, 0, Math.PI * 2); ctx.fill();
+
+  ctx.restore();
+}
+
+/* ─── Main draw ──────────────────────────────────────────────────────── */
+let time = 0;
+
+function draw() {
+  /* Background */
+  const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  bg.addColorStop(0, '#020618');
+  bg.addColorStop(1, '#08081e');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  /* Stars */
+  for (const s of stars) {
+    const a = 0.35 + 0.65 * Math.sin(s.phase + time * s.spd);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(s.x * canvas.width, s.y * canvas.height, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  /* Ambient glow behind number */
+  const ag = ctx.createRadialGradient(
+    canvas.width / 2, canvas.height / 2, 0,
+    canvas.width / 2, canvas.height / 2, Math.min(canvas.width, canvas.height) * 0.5
+  );
+  ag.addColorStop(0, 'rgba(20,55,180,0.14)');
+  ag.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = ag;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  /* Big number */
+  const fs = numberFontSize();
+  ctx.font         = `900 ${fs}px 'Arial Black', Arial, sans-serif`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.shadowColor = '#1a44cc'; ctx.shadowBlur = 70;
+  ctx.fillStyle = '#99bbff';
+  ctx.fillText(String(DAYS), canvas.width / 2, canvas.height / 2);
+
+  ctx.shadowBlur = 30;
+  ctx.fillStyle = '#ccdeff';
+  ctx.fillText(String(DAYS), canvas.width / 2, canvas.height / 2);
+
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(String(DAYS), canvas.width / 2, canvas.height / 2);
+
+  /* Particles */
+  drawParticles();
+
+  /* Player */
+  drawPlayer();
+
+  /* Label */
+  ctx.shadowBlur   = 0;
+  ctx.font         = 'bold 15px Arial, sans-serif';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle    = 'rgba(170,195,255,0.75)';
+  ctx.fillText(`Plus que ${DAYS} jours avant que tu viennes didou <3`, canvas.width / 2, 16);
+
+  /* Controls hint */
+  ctx.font         = '12px Arial, sans-serif';
+  ctx.textBaseline = 'bottom';
+  ctx.fillStyle    = 'rgba(255,255,255,0.25)';
+  ctx.fillText(
+    'Flèches pour se déplacer  •  ↑ pour s\'envoler',
+    canvas.width / 2, canvas.height - 88
+  );
+}
+
+/* ─── Fixed-step game loop ────────────────────────────────────────────── */
+const FIXED_DT   = 1 / 60;
+let   accumulator = 0;
+let   lastStamp   = null;
+
+function loop(ts) {
+  if (lastStamp === null) lastStamp = ts;
+  const elapsed = Math.min((ts - lastStamp) / 1000, 0.1);
+  lastStamp = ts;
+  time += elapsed;
+  accumulator += elapsed;
+  while (accumulator >= FIXED_DT) { update(FIXED_DT); accumulator -= FIXED_DT; }
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
 </body>
 </html>
