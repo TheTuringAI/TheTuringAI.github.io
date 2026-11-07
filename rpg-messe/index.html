@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Un dimanche à la messe — petit RPG</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; height:100%; background:#1b1426; overflow:hidden; font-family:"Pixelify Sans", monospace; }
+  body { display:flex; align-items:center; justify-content:center; }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; display:block; box-shadow:0 0 0 4px #3b2a3a, 0 0 40px #000a; }
+  #hint { position:fixed; left:0; right:0; bottom:8px; text-align:center; color:#b9a7c9; font-size:14px; pointer-events:none; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hint">Flèches / ZQSD / WASD : bouger · Espace / E : parler, continuer · M : musique</div>
+<script>window.addEventListener("error",e=>{const h=document.getElementById("hint");h.textContent="Erreur : "+e.message+" ("+(e.filename||"").split("/").pop()+":"+e.lineno+")";h.style.color="#ff8fb1";});window.addEventListener("unhandledrejection",e=>{const h=document.getElementById("hint");h.textContent="Erreur : "+(e.reason&&e.reason.stack||e.reason);h.style.color="#ff8fb1";});</script>
+<script src="js/art.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
